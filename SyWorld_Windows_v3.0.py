@@ -32,13 +32,11 @@ def init():
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
     global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready
     #my_address = '192.168.137.1'
-    #my_address = '172.16.6.143'
-    my_address = '172.22.54.10'
+    my_address = '172.16.6.143'
     my_port = 8001
     my_port_file = 8002
     #dest_address = '192.168.137.198'
-    #dest_address = '172.16.7.12'
-    dest_address = '172.22.54.11'
+    dest_address = '172.16.7.12'
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -108,7 +106,7 @@ class ReceiveThread(threading.Thread):
         while True:
             if status > 0:
                 if debug_con == 0:
-                    buf = sock.recv(1024)
+                    buf = sock.recv(10240)
                 if debug_out == 1: print buf
                 if buf[0] == 'b':
                     if buf[1] == '1':

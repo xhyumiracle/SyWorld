@@ -48,7 +48,7 @@ def socketInit(addr,port):
 #
 #TODO:use status to judge to which screen should we send msg
 def socketSend(type, str):
-    global sleeptime,debugout,debugcon
+    global sleep_time,debug_out,debug_con
     #time.sleep(sleeptime)
     sendstr = ""
     if type == "set":
@@ -89,13 +89,13 @@ def enterScreen(screenid):
 
 
 def hideMouseFake():
-    global screenbound,mouse_pos_old,mouse_pos,mouse
+    global screenbound,mouse_posold,mouse_pos,mouse
     mouse_pos[0] = screenbound[0]
     mouse_pos[1] = screenbound[1]/2
     mouse_pos_old[0] = mouse_pos[0]
     mouse_pos_old[1] = mouse_pos[1]
-    if debugout == 1:print "mouse_pos_old: "+str(mouse_pos_old)
-    if debugout == 1:print "mouse_pos: "+str(mouse_pos)
+    if debugout == 1:print "mouse_pos_old: " + str(mouse_pos_old)
+    if debugout == 1:print "mouse_pos: " + str(mouse_pos)
     mouse.move(mouse_pos[0],mouse_pos[1])
 
 
@@ -114,8 +114,8 @@ def getSetPosStr(screenid):
 
 def getDposStr():
     global mouse_pos_old,mouse_pos
-    if debugout == 1:print "mouse_pos_old: "+str(mouse_pos_old)
-    if debugout == 1:print "mouse_pos: "+str(mouse_pos)
+    if debugout == 1:print "mouse_pos_old: " + str(mouse_pos_old)
+    if debugout == 1:print "mouse_pos: " + str(mouse_pos)
     return str(mouse_pos[0]-mouse_pos_old[0]) +","+ str(mouse_pos[1]-mouse_pos_old[1])
 
 
@@ -189,7 +189,7 @@ debugcon = 0
 debugesc = 1
 debugout = 0
 init()
-if debugcon == 0:socketInit('192.168.191.1',8001)
+if debugcon == 0:socketInit('192.168.137.1', 8001)
 afterConnected()
 hm = pyHook.HookManager()
 hm.MouseMove = onMouseMoveEvent
