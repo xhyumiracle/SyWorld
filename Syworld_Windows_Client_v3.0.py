@@ -18,7 +18,7 @@ global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_
 mouse = PyMouse()
 key = PyKeyboard()
 mouse_pos = list(mouse.position())
-debugout = 1
+debugout = 0
 sleeptime = 0
 screenboundary=(1279,719)
 center = 1
@@ -47,28 +47,36 @@ class FileTransportThreading(threading.Thread):
 
     def run(self):
         print "ft runnint!"
-        global my_address_port_file, dest_address_port_file
+        global my_address_port_file, dest_address_port_file, debugout
         file_sock = sockInit(my_address_port_file, dest_address_port_file)
         while True:
-            print "waiting file name"
-            buf = file_sock.recv(1030)
-            print "file name: "+buf
-            file_name = buf
+            if debugout == 1: print "ready for recv file"
+            file_name = file_sock.recv(1030)
+            print "recv file name: "+file_name
+            file_sock.sendto("begin", dest_address_port_file)
             fd = None
             try:
-                fd = open("c:/"+file_name, "ab")
+                if debugout == 1: print "going to open file"
+                fd = open("c:/" + file_name, "ab")
+                if debugout == 1: print "recving: " + file_name
+                recv_count = 0
                 while True:
-                    buf = file_sock.recv(10300)
+                    print "wait for data"
+                    buf = file_sock.recv(1030)
+                    if buf[:3] == 'end':  # end
+                        break
+                    recv_count += 1
+                    if recv_count == 10:
+                        file_sock.sendto("continue", dest_address_port_file)
+                        recv_count = 0
                     #找一下如何不让缓冲区过满而丢包
                     fd.write(buf[1:])
-                    if buf[0] == '1':  # end
-                        break
+                    print "recv_count"+str(recv_count)
+                print "finish!"
             except Exception as e:
                 print e
             finally:
                 fd.close()
-
-            break
         print "ft end!"
 
 
@@ -86,7 +94,7 @@ def movMousePos(pos):#pos=[x,y]
         center = 0
     elif center == 1 and mouse_pos[0] >= screenboundary[0]:
         sock.sendto('clp'+get_clipboard_data(), dest_address_port)#from 6 to 5
-        sock.sendto('b2'+str(mouse_pos[1]), dest_address_port)#from 4 to 5
+        sock.sendto('b2'+str(mouse_pos[1]), dest_address_port)#from 4 to 5
         if debugout == 1: print 'b2'+str(mouse_pos[1])
         center = 0
     elif center == 1 and mouse_pos[1] >= screenboundary[1]:
@@ -102,8 +110,6 @@ def movMousePos(pos):#pos=[x,y]
     else: center = 1
     if debugout == 1:print "mov" + str(pos)
 
-    if debugout == 1: print "mov" + str(pos)
-
 
 def setMousePos(pos):#pos=[x,y]
     global mouse,mouse_pos
@@ -117,9 +123,10 @@ def sockInit(address_port, destination):
     print "sockInit "+str(address_port)
     soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     soc.bind(address_port)
-    print "sendto"+str(destination)
-    soc.sendto("hi!!", destination)
-    print "sended!"
+    print "init on " + str(address_port)
+    #print "sendto"+str(destination)
+    #soc.sendto("hi!!", destination)
+    #print "sended!"
     return soc
 
 

@@ -50,10 +50,11 @@ def setMousePos(pos):#pos=[x,y]
     if debugout == 1:print "set" + str(pos)
 
 
+
 def sockInit():
     global sock
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('192.168.191.1',8001))
+    sock.connect(('192.168.137.1',8001))
     sock.send("hi!!")
 
 
