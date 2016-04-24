@@ -1,4 +1,3 @@
-# -*- coding=utf-8 -*-
 import pyHook
 from pymouse import PyMouse
 from pykeyboard import PyKeyboard
@@ -15,6 +14,7 @@ global connection,sock
 global sleep_time
 global debug_con,debug_esc, debug_out
 global online
+global setpos, set_pos_tag
 global pymousepos, pymousepos_old, mouse_pos_hide, margin # pos=[]
 global hm
 global clipboard_open
@@ -25,7 +25,7 @@ global mouse_left_down_pos, is_mouse_left_down
 global is_files_ready, files_to_send
 
 def init():
-    global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
+    global online, set_pos_tag, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
     global screen_bound, dest_screen_bound
     global pymousepos, pymousepos_old, mouse_pos_hide, margin
     global my_address, my_port, my_port_file, my_address_port, my_address_port_file
@@ -49,6 +49,7 @@ def init():
     screen_bound = (1365L, 767L)
     dest_screen_bound = (1279L, 719L)
     margin = 10
+    set_pos_tag = False
     sleep_time = 0
     clipboard_open = False
     hm = pyHook.HookManager()
@@ -70,51 +71,28 @@ class MousePosThread(threading.Thread):
         threading.Thread.__init__(self,name="mt")
 
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, hm, pymousepos
-        global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready
         if debug_out == 1: print "mt running!"
-        set_pos_tag = False
-        setpos = ""
+        global status, pymousepos, mouse, setpos, set_pos_tag
         while True:
             if status == 0:
                 pymousepos = list(mouse.position())
                 if online[1] == True and pymousepos[0] >= screen_bound[0]:
                     status = 1
-                    setpos = '2'+str(pymousepos[1])  # enter right screen
+                    setpos = str(margin) + ',' + str(pymousepos[1])
                     set_pos_tag = True
                 elif online[2] == True and pymousepos[0] <= 0:
                     status = 2
-                    setpos = '1'+str(pymousepos[1])  # enter left screen
+                    setpos = str(dest_screen_bound[0] - margin) + ',' + str(pymousepos[1])
                     set_pos_tag = True
                 elif online[3] == True and pymousepos[1] <= 0:
                     status = 3
-                    setpos = '4'+str(pymousepos[0])  # enter up screen
+                    setpos = str(pymousepos[0]) + ',' + str(dest_screen_bound[1] - margin)
                     set_pos_tag = True
                 elif online[4] == True and pymousepos[1] >= screen_bound[1]:
                     status = 4
-                    setpos = '3'+str(pymousepos[0])  # enter down screen
+                    setpos = str(pymousepos[0]) + ',' + str(margin)
                     set_pos_tag = True
-            elif status > 0:
-                if set_pos_tag:  # enter screen
-                    # send set pos
-                    socket_send('set', setpos)
-                    # release mouse left if is dragging file
-                    print "is_mouse_left_down: " + str(is_mouse_left_down)
-                    if is_mouse_left_down:
-                        # get file path
-                        files_to_send = get_files_by_clipboard()
-                        if files_to_send != None: is_files_ready = True
-                    else:
-                        # hide pointer
-                        mouse.move(screen_bound[0], screen_bound[1] / 2)
-                        # Hook mouse
-                        hm.MouseMove = on_mouse_move
-                    hm.MouseAllButtons = on_mouse_click
-                    hm.KeyUp = on_keyboard_up
-                    hm.KeyDown = on_keyboard_down
-                    # pyHook.HookManager.HookMouse
-                    socket_send('clp', get_clipboard_data())
-                    set_pos_tag = False
+
 
 
 class ReceiveThread(threading.Thread):
@@ -142,6 +120,38 @@ class ReceiveThread(threading.Thread):
                     reset_controler()
                 elif buf[:3] == 'clp':
                     set_clipboard_data(buf[3:])
+
+
+class SendThread(threading.Thread):
+    def __init__(self):
+        threading.Thread.__init__(self, name="sendthread")
+
+    def run(self):
+        global status, debug_out, debug_con, margin, mouse, screen_bound, setpos, set_pos_tag, hm
+        global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready
+        if debug_out == 1: print "st running!"
+        while True:
+            if status > 0:
+                if set_pos_tag:  # enter screen
+                    # send set pos
+                    socket_send('set', setpos)
+                    # release mouse left if is dragging file
+                    print "is_mouse_left_down: " + str(is_mouse_left_down)
+                    if is_mouse_left_down:
+                        # get file path
+                        files_to_send = get_files_by_clipboard()
+                        if files_to_send != None: is_files_ready = True
+                    else:
+                        # hide pointer
+                        mouse.move(screen_bound[0], screen_bound[1] / 2)
+                        # Hook mouse
+                        hm.MouseMove = on_mouse_move
+                    hm.MouseAllButtons = on_mouse_click
+                    hm.KeyUp = on_keyboard_up
+                    hm.KeyDown = on_keyboard_down
+                    # pyHook.HookManager.HookMouse
+                    socket_send('clp', get_clipboard_data())
+                    set_pos_tag = False
 
 
 class FileTransportThread(threading.Thread):
@@ -206,7 +216,7 @@ def socket_send(op, arg):
     global sleep_time, debug_out, debug_con, sock, dest_address_port
     # time.sleep(sleeptime)
     if op == "set":
-        sendstr = "b" + arg  # set0,123 -> b#1#123 -> b1123
+        sendstr = "set" + arg
     elif op == "mov":
         sendstr = "mov" + arg
     elif op == "clc":
@@ -400,9 +410,11 @@ debug_con = 0
 debug_esc = 1
 debug_out = 1
 init()
+st = SendThread()
 rt = ReceiveThread()
 mt = MousePosThread()
 ft = FileTransportThread()
+st.setDaemon(True)
 rt.setDaemon(True)
 mt.setDaemon(True)
 ft.setDaemon(True)
@@ -411,6 +423,7 @@ ft.start()
 if debug_con == 0:
     sock = socket_init(my_address_port)
 # other threads especially st & rt should start after main's socket_init for they use the global var 'sock'
+st.start()
 rt.start()
 mt.start()
 hm.MouseAllButtons = on_mouse_click_status0
