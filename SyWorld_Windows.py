@@ -32,11 +32,11 @@ def init():
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
     global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready
     #my_address = '192.168.137.1'
-    my_address = '172.16.6.143'
+    my_address = '0.0.0.0'
     my_port = 8001
     my_port_file = 8002
     #dest_address = '192.168.137.198'
-    dest_address = '172.16.7.12'
+    dest_address = '172.22.188.140'
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -140,7 +140,20 @@ class ReceiveThread(threading.Thread):
                     else:  # buf[1] == 4
                         mouse.move(int(buf[2:]), screen_bound[1] - margin)
                     reset_controler()
-                elif buf[:3] == 'clp':
+                if buf[:3] == "mov":
+                    pos = buf[3:].split(',')
+                    mouse.move(int(pos[0]), int(pos[1]))
+                elif buf[:3] == "clc":
+                    mouse.click(int(buf[3:]))
+                elif buf[:2] == "kd":
+                    keyboard.press_key(int(buf[2:]))
+                elif buf[:2] == "ku":
+                    keyboard.release_key(int(buf[2:]))
+                #elif buf[:3] == "set":
+                #    pos = buf[3:].split(',')
+                #    mouse.move(int(pos[0]), int(pos[1]))
+                # TODO: clipboard format and data
+                elif buf[:3] == "clp":
                     set_clipboard_data(buf[3:])
 
 
