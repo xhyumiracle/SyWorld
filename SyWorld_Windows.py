@@ -15,7 +15,7 @@ global connection,sock
 global sleep_time
 global debug_con,debug_esc, debug_out
 global online
-global pymousepos, pymousepos_old, mouse_pos_hide, margin # pos=[]
+global pymousepos, pymousepos_old, mouse_pos_hide, margin, mouse_pos # pos=[]
 global hm
 global clipboard_open
 global my_address, my_port, my_port_file, my_address_port, my_address_port_file
@@ -36,7 +36,8 @@ def init():
     my_port = 8001
     my_port_file = 8002
     #dest_address = '192.168.137.198'
-    dest_address = '172.22.188.140'
+    #dest_address = '172.22.188.140'
+    dest_address = '192.168.30.171'
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -123,10 +124,10 @@ class ReceiveThread(threading.Thread):
         threading.Thread.__init__(self,name="receivethread")
 
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, sock
+        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, mouse_pos
         if debug_out == 1: print "rt running!"
         while True:
-            if status > 0:
+            if 1:
                 if debug_con == 0:
                     buf = sock.recv(10240)
                 if debug_out == 1: print buf
@@ -142,7 +143,9 @@ class ReceiveThread(threading.Thread):
                     reset_controler()
                 if buf[:3] == "mov":
                     pos = buf[3:].split(',')
-                    mouse.move(int(pos[0]), int(pos[1]))
+                    mouse_pos[0] += int(pos[0])
+                    mouse_pos[1] += int(pos[1])
+                    mouse.move(mouse_pos[0], mouse_pos[1])
                 elif buf[:3] == "clc":
                     mouse.click(int(buf[3:]))
                 elif buf[:2] == "kd":
@@ -232,13 +235,13 @@ def socket_send(op, arg):
         sendstr = "clp" + arg
     else:
         sendstr = arg
-    #if debug_out == 1:print sendstr
+    if debug_out == 1:print sendstr
     if debug_con == 0:sock.sendto(sendstr, dest_address_port)
 
 
 # every status = 0 should follow something like hm.keyboard = on_return_ture
 def on_mouse_move(event):
-    global mouse_pos_hide, status, screen_bound, dest_address_port
+    global mouse_pos_hide, status, screen_bound, dest_address_port, mouse_pos
     if status > 0:
         mouse_pos = list(event.Position)
         socket_send("mov", str(mouse_pos[0] - mouse_pos_hide[0]) + ',' + str(mouse_pos[1] - mouse_pos_hide[1]))
