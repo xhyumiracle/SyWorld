@@ -31,12 +31,13 @@ def init():
     global my_address, my_port, my_port_file, my_address_port, my_address_port_file
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
     global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready
-    #my_address = '192.168.137.1'
-    my_address = '172.16.6.143'
+    my_address = '0.0.0.0'
     my_port = 8001
     my_port_file = 8002
     #dest_address = '192.168.137.198'
-    dest_address = '172.16.7.12'
+    #dest_address = '172.16.7.12'
+    #dest_address = '192.168.30.171'
+    dest_address = '192.168.2.105'
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -229,7 +230,7 @@ def socket_send(op, arg):
         sendstr = "clp" + arg
     else:
         sendstr = arg
-    #if debug_out == 1:print sendstr
+    if debug_out == 1:print sendstr
     if debug_con == 0:sock.sendto(sendstr, dest_address_port)
 
 
@@ -342,7 +343,7 @@ def get_files_by_clipboard():
         # should be with hm.KeyUp = ... logically, but put here to give user a quick feed back that entered other screen
         # while localhost can continue its clipboard operations
 
-        # TODO: not so graceful hear (time.sleep)
+        # NOTHING TODO: not so graceful hear (time.sleep)
         time.sleep(0.2)
         #keyboard.tap_key(40)
         keyboard.press_key(162)  # ctrl
@@ -350,7 +351,7 @@ def get_files_by_clipboard():
         keyboard.release_key(67)  # c
         keyboard.release_key(162)  # ctrl
         time.sleep(0.2)
-        # TODO: how to detect clipboard open ? then i can check whether the ctrl-c had been pressed successfully
+        # NOTHING TODO: how to detect clipboard open ? then i can check whether the ctrl-c had been pressed successfully
         while clipboard_open: pass
         winclip.OpenClipboard()
         clipboard_open = True

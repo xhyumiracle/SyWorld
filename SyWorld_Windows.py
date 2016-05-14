@@ -15,7 +15,7 @@ global connection,sock
 global sleep_time
 global debug_con,debug_esc, debug_out
 global online
-global pymousepos, pymousepos_old, mouse_pos_hide, margin, mouse_pos # pos=[]
+global pymousepos, pymousepos_old, mouse_pos_hide, margin # pos=[]
 global hm
 global clipboard_open
 global my_address, my_port, my_port_file, my_address_port, my_address_port_file
@@ -37,7 +37,7 @@ def init():
     my_port_file = 8002
     #dest_address = '192.168.137.198'
     #dest_address = '172.22.188.140'
-    dest_address = '192.168.30.171'
+    dest_address = '172.22.226.10'
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -124,7 +124,7 @@ class ReceiveThread(threading.Thread):
         threading.Thread.__init__(self,name="receivethread")
 
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, mouse_pos
+        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, pymousepos
         if debug_out == 1: print "rt running!"
         while True:
             if 1:
@@ -133,21 +133,25 @@ class ReceiveThread(threading.Thread):
                 if debug_out == 1: print buf
                 if buf[0] == 'b':
                     if buf[1] == '1':
+                        reset_controler()
                         mouse.move(screen_bound[0] - margin, int(buf[2:]))
                     elif buf[1] == '2':
+                        reset_controler()
                         mouse.move(margin, int(buf[2:]))
                     elif buf[1] == '3':
+                        reset_controler()
                         mouse.move(int(buf[2:]), margin)
                     else:  # buf[1] == 4
+                        reset_controler()
                         mouse.move(int(buf[2:]), screen_bound[1] - margin)
                     reset_controler()
                 if buf[:3] == "mov":
                     pos = buf[3:].split(',')
-                    mouse_pos[0] += int(pos[0])
-                    mouse_pos[1] += int(pos[1])
-                    mouse.move(mouse_pos[0], mouse_pos[1])
+                    pymousepos[0] += int(pos[0])
+                    pymousepos[1] += int(pos[1])
+                    mouse.move(pymousepos[0], pymousepos[1])
                 elif buf[:3] == "clc":
-                    mouse.click(int(buf[3:]))
+                    mouse_button(int(buf[3:]))
                 elif buf[:2] == "kd":
                     keyboard.press_key(int(buf[2:]))
                 elif buf[:2] == "ku":
@@ -241,7 +245,7 @@ def socket_send(op, arg):
 
 # every status = 0 should follow something like hm.keyboard = on_return_ture
 def on_mouse_move(event):
-    global mouse_pos_hide, status, screen_bound, dest_address_port, mouse_pos
+    global mouse_pos_hide, status, screen_bound, dest_address_port
     if status > 0:
         mouse_pos = list(event.Position)
         socket_send("mov", str(mouse_pos[0] - mouse_pos_hide[0]) + ',' + str(mouse_pos[1] - mouse_pos_hide[1]))
@@ -410,6 +414,18 @@ def return_true(event):
 def keytest(event):
     print "keytest:"+str(event.KeyID)
     return True
+
+
+def mouse_button(msg):
+    global mouse, pymousepos
+    if msg == 513:
+        mouse.press(pymousepos[0], pymousepos[1],1)
+    if msg == 514:
+        mouse.release(pymousepos[0], pymousepos[1],1)
+    if msg == 516:
+        mouse.release(pymousepos[0], pymousepos[1],2)
+    if msg == 517:
+        mouse.release(pymousepos[0], pymousepos[1],2)
 
 #   __main__
 debug_con = 0
