@@ -7,11 +7,13 @@ import socket
 import threading
 import win32clipboard as winclip
 import win32con
+import sys
+import getopt
 
 global screen_bound, dest_screen_bound
 global mouse, keyboard
 global status
-global connection,sock
+global connection, sock
 global sleep_time
 global debug_con,debug_esc, debug_out
 global online
@@ -24,7 +26,7 @@ global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE
 global mouse_left_down_pos, is_mouse_left_down
 global is_files_ready, files_to_send
 
-def init():
+def init(destaddr):
     global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
     global screen_bound, dest_screen_bound
     global pymousepos, pymousepos_old, mouse_pos_hide, margin
@@ -35,9 +37,7 @@ def init():
     my_address = '0.0.0.0'
     my_port = 8001
     my_port_file = 8002
-    #dest_address = '192.168.137.198'
-    #dest_address = '172.22.188.140'
-    dest_address = '172.22.226.10'
+    dest_address = destaddr
     dest_port = 8001
     dest_port_file = 8002
     SOCKET_SND_BUF_SIZE = 65536
@@ -423,31 +423,59 @@ def mouse_button(msg):
     if msg == 514:
         mouse.release(pymousepos[0], pymousepos[1],1)
     if msg == 516:
-        mouse.release(pymousepos[0], pymousepos[1],2)
+        mouse.release(pymousepos[1], pymousepos[1],2)
     if msg == 517:
         mouse.release(pymousepos[0], pymousepos[1],2)
 
+
+def Usage():
+    something = "say something"
+    print something
+
+
+def main(argv):
+    try:
+        opts, args = getopt.getopt(argv[1:], 'd:', ['destination='])
+    except getopt.GetoptError, err:
+        print err
+        Usage()
+    for o, a in opts:
+        if o in ['-d', '--destination']:
+            run(a)
+            print a+'###'
+
+
+# def run(d = '172.22.226.10'):
+def run(d = '192.168.191.2'):
+    global debug_out, debug_con, debug_esc, hm, sock
+    debug_con = 0
+    debug_esc = 1
+    debug_out = 1
+    init(d)
+    rt = ReceiveThread()
+    mt = MousePosThread()
+    ft = FileTransportThread()
+    rt.setDaemon(True)
+    mt.setDaemon(True)
+    ft.setDaemon(True)
+    # ft should start before main thread's socket_init, or file port will be blocked by main port's recv()
+    ft.start()
+    if debug_con == 0:
+        sock = socket_init(my_address_port)
+    # other threads especially st & rt should start after main's socket_init for they use the global var 'sock'
+    rt.start()
+    mt.start()
+    hm.MouseAllButtons = on_mouse_click_status0
+    #hm.KeyUp = keytest
+    hm.HookMouse()
+    hm.HookKeyboard()
+    win32gui.PumpMessages()
+    socket_close()
+
+
 #   __main__
-debug_con = 0
-debug_esc = 1
-debug_out = 1
-init()
-rt = ReceiveThread()
-mt = MousePosThread()
-ft = FileTransportThread()
-rt.setDaemon(True)
-mt.setDaemon(True)
-ft.setDaemon(True)
-# ft should start before main thread's socket_init, or file port will be blocked by main port's recv()
-ft.start()
-if debug_con == 0:
-    sock = socket_init(my_address_port)
-# other threads especially st & rt should start after main's socket_init for they use the global var 'sock'
-rt.start()
-mt.start()
-hm.MouseAllButtons = on_mouse_click_status0
-#hm.KeyUp = keytest
-hm.HookMouse()
-hm.HookKeyboard()
-win32gui.PumpMessages()
-socket_close()
+# if __name__ == '__main__':
+#     main(sys.argv)
+# else:
+print "ha"
+run()
