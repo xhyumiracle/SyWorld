@@ -286,7 +286,7 @@ def on_mouse_move(event):
     global mouse_pos_hide, status, ratio_pos
     if status > 0:
         mouse_pos = event.Position
-        socket_send("mov", str((mouse_pos[0] - mouse_pos_hide[0]) * ratio_pos[0]) + ',' + str((mouse_pos[1] - mouse_pos_hide[1])* ratio_pos[1]))
+        socket_send("mov", str(int((mouse_pos[0] - mouse_pos_hide[0]) * ratio_pos[0])) + ',' + str(int((mouse_pos[1] - mouse_pos_hide[1])* ratio_pos[1])))
         return False
     return True
 
