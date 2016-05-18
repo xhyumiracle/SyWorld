@@ -24,7 +24,7 @@ global my_address, my_port, my_port_file, my_address_port, my_address_port_file
 global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
 global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE
 global mouse_left_down_pos, is_mouse_left_down
-global is_files_ready, files_to_send
+global is_files_ready, files_to_send, mlock, needmovmouse
 
 def init(destaddr):
     global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
@@ -32,7 +32,7 @@ def init(destaddr):
     global pymousepos, pymousepos_old, mouse_pos_hide, margin
     global my_address, my_port, my_port_file, my_address_port, my_address_port_file
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
-    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready
+    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse
     #my_address = '192.168.137.1'
     my_address = '0.0.0.0'
     my_port = 8001
@@ -64,6 +64,24 @@ def init(destaddr):
     is_mouse_left_down = False
     is_files_ready = False
 
+    mlock = Lock()
+    needmovmouse = False
+
+
+#  used in mouse thread
+class Lock():
+    __signal = 1
+    def __init__(self, sgn=1):
+        self.__signal = sgn
+
+    def wait(self):
+        while not self.__signal:
+            pass
+        self.__signal -= 1
+
+    def done(self):
+        self.__signal += 1
+
 
 # done
 class MousePosThread(threading.Thread):
@@ -78,6 +96,8 @@ class MousePosThread(threading.Thread):
         setpos = ""
         while True:
             if status == 0:
+                while needmovmouse: pass
+                mlock.wait()
                 pymousepos = list(mouse.position())
                 if online[1] == True and pymousepos[0] >= screen_bound[0]:
                     status = 1
@@ -95,6 +115,7 @@ class MousePosThread(threading.Thread):
                     status = 4
                     setpos = '3'+str(pymousepos[0])  # enter down screen
                     set_pos_tag = True
+                mlock.done()
             elif status > 0:
                 if set_pos_tag:  # enter screen
                     # send set pos
@@ -120,7 +141,6 @@ class MousePosThread(threading.Thread):
 
 class ReceiveThread(threading.Thread):
     def __init__(self):
-
         threading.Thread.__init__(self,name="receivethread")
 
     def run(self):
@@ -130,8 +150,11 @@ class ReceiveThread(threading.Thread):
             if 1:
                 if debug_con == 0:
                     buf = sock.recv(10240)
-                if debug_out == 1: print buf
+                if debug_out == 1: print "rec" + buf
                 if buf[0] == 'b':
+                    needmovmouse = True
+                    mlock.wait()
+                    needmovmouse = False
                     if buf[1] == '1':
                         reset_controler()
                         mouse.move(screen_bound[0] - margin, int(buf[2:]))
@@ -145,11 +168,14 @@ class ReceiveThread(threading.Thread):
                         reset_controler()
                         mouse.move(int(buf[2:]), screen_bound[1] - margin)
                     reset_controler()
+                    mlock.done()
                 if buf[:3] == "mov":
+                    mlock.wait()
                     pos = buf[3:].split(',')
                     pymousepos[0] += int(pos[0])
                     pymousepos[1] += int(pos[1])
                     mouse.move(pymousepos[0], pymousepos[1])
+                    mlock.done()
                 elif buf[:3] == "clc":
                     mouse_button(int(buf[3:]))
                 elif buf[:2] == "kd":
@@ -239,7 +265,7 @@ def socket_send(op, arg):
         sendstr = "clp" + arg
     else:
         sendstr = arg
-    if debug_out == 1:print sendstr
+    if debug_out == 1:print "snd" + sendstr
     if debug_con == 0:sock.sendto(sendstr, dest_address_port)
 
 
@@ -446,7 +472,7 @@ def main(argv):
 
 
 # def run(d = '172.22.226.10'):
-def run(d = '192.168.191.2'):
+def run(d = '192.168.191.1'):
     global debug_out, debug_con, debug_esc, hm, sock
     debug_con = 0
     debug_esc = 1
