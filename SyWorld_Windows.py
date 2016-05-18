@@ -283,10 +283,10 @@ def socket_send(op, arg):
 
 # every status = 0 should follow something like hm.keyboard = on_return_ture
 def on_mouse_move(event):
-    global mouse_pos_hide, status
+    global mouse_pos_hide, status, ratio_pos
     if status > 0:
-        mouse_pos = trans_hook_pos_to_pymouse_pos_list(event.Position)
-        socket_send("mov", str(mouse_pos[0] - mouse_pos_hide[0]) + ',' + str(mouse_pos[1] - mouse_pos_hide[1]))
+        mouse_pos = event.Position
+        socket_send("mov", str((mouse_pos[0] - mouse_pos_hide[0]) * ratio_pos[0]) + ',' + str((mouse_pos[1] - mouse_pos_hide[1])* ratio_pos[1]))
         return False
     return True
 
@@ -449,9 +449,6 @@ def socket_close():
     connection.close()
     sock.close()
 
-def trans_hook_pos_to_pymouse_pos_list(pos):
-    global ratio_pos
-    return [int(pos[0] * ratio_pos[0]), int(pos[1] * ratio_pos[1])]
 
 def clc_set_bound(event):
     global screen_bound_ui, ratio_pos
