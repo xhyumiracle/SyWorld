@@ -117,19 +117,19 @@ class MousePosThread(threading.Thread):
                 pymousepos = list(mouse.position())
                 if online[1] == True and pymousepos[0] >= screen_bound_ui[0]:
                     status = 1
-                    setpos = '2'+str(pymousepos[1]/screen_bound_ui[1])  # enter right screen
+                    setpos = '2'+str(float(pymousepos[1])/float(screen_bound_ui[1]))  # enter right screen
                     set_pos_tag = True
                 elif online[2] == True and pymousepos[0] <= 0:
                     status = 2
-                    setpos = '1'+str(pymousepos[1]/screen_bound_ui[1])  # enter left screen
+                    setpos = '1'+str(float(pymousepos[1])/float(screen_bound_ui[1]))  # enter left screen
                     set_pos_tag = True
                 elif online[3] == True and pymousepos[1] <= 0:
                     status = 3
-                    setpos = '4'+str(pymousepos[0]/screen_bound_ui[0])  # enter up screen
+                    setpos = '4'+str(float(pymousepos[0])/float(screen_bound_ui[0]))  # enter up screen
                     set_pos_tag = True
                 elif online[4] == True and pymousepos[1] >= screen_bound_ui[1]:
                     status = 4
-                    setpos = '3'+str(pymousepos[0]/screen_bound_ui[0])  # enter down screen
+                    setpos = '3'+str(float(pymousepos[0])/float(screen_bound_ui[0]))  # enter down screen
                     set_pos_tag = True
                 # mlock.done()
             elif status > 0:
@@ -428,6 +428,8 @@ def reset_controler(go_center = False):
     hm.KeyDown = return_true
     status = 0
 
+# TODO: ratio need float
+    #BUG: mouse cannot return
     if debug_out == 1: print "reset_controler(!"
 
 
@@ -456,7 +458,7 @@ def clc_set_bound(event):
     screen_bound_ui = mouse.position()
     # screen_bound_hk: only used in this function
     screen_bound_hk = event.Position
-    ratio_pos = (screen_bound_ui[0]/screen_bound_hk[0], screen_bound_ui[1]/screen_bound_hk[1])
+    ratio_pos = (float(screen_bound_ui[0])/float(screen_bound_hk[0]), float(screen_bound_ui[1])/float(screen_bound_hk[1]))
     print "screen_bound_ui:"+ str(screen_bound_ui)
     print "ratio:"+str(ratio_pos)
     return False
