@@ -10,7 +10,7 @@ import win32con
 import sys
 import getopt
 
-global screen_bound, dest_screen_bound
+global screen_bound_ui
 global mouse, keyboard
 global status
 global connection, sock
@@ -24,16 +24,15 @@ global my_address, my_port, my_port_file, my_address_port, my_address_port_file
 global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
 global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE
 global mouse_left_down_pos, is_mouse_left_down
-global is_files_ready, files_to_send, mlock, needmovmouse
+global is_files_ready, files_to_send, mlock, needmovmouse, ratio_pos
 
 def init(destaddr):
     global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
-    global screen_bound, dest_screen_bound
+    global screen_bound_ui
     global pymousepos, pymousepos_old, mouse_pos_hide, margin
     global my_address, my_port, my_port_file, my_address_port, my_address_port_file
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
-    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse
-    #my_address = '192.168.137.1'
+    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse, ratio_pos
     my_address = '0.0.0.0'
     my_port = 8001
     my_port_file = 8002
@@ -47,13 +46,13 @@ def init(destaddr):
     status = 0
     mouse = PyMouse()
     keyboard = PyKeyboard()
-    screen_bound = (1365L, 767L)
-    dest_screen_bound = (1279L, 719L)
     margin = 10
     sleep_time = 0
     clipboard_open = False
     hm = pyHook.HookManager()
-    mouse_pos_hide = (screen_bound[0], screen_bound[1]/2)
+    screen_bound_ui = (0, 0)
+    # attention: mouse_pos_hide is used in Hook
+    mouse_pos_hide = (0, 0)
     pymousepos = pymousepos_old = []
 
     my_address_port = (my_address, my_port)
@@ -64,35 +63,50 @@ def init(destaddr):
     is_mouse_left_down = False
     is_files_ready = False
 
-    mlock = Lock()
-    needmovmouse = False
+    ratio_pos = (1, 1)
 
 
 #  used in mouse thread
-class Lock():
-    __signal = 1
-    def __init__(self, sgn=1):
-        self.__signal = sgn
-
-    def wait(self):
-        while self.__signal <= 0:
-            pass
-        self.__signal -= 1
-        if self.__signal < 0:
-            print "nononononononononononon!!!!!!!!!!!!!!!!!!!!!!!"
-
-    def done(self):
-        self.__signal += 1
+# class Lock():
+#     __signal = 1
+#     def __init__(self, sgn=1):
+#         self.__signal = sgn
+#
+#     def wait(self):
+#         while self.__signal <= 0:
+#             pass
+#         self.__signal -= 1
+#
+#     def done(self):
+#         self.__signal += 1
 
 
 # done
 class MousePosThread(threading.Thread):
+    ready = False
     def __init__(self):
         threading.Thread.__init__(self,name="mt")
 
+    def __get_max_and_hide_pos(self):
+        global mouse
+        maxpos = 1000000000
+        time.sleep(0.001)
+        hm.MouseLeftDown = clc_set_bound
+        hm.MouseMove = return_false
+        pos = mouse.position()
+        mouse.click(maxpos, maxpos, 1)
+        hm.MouseLeftDown = clc_set_hide_pos
+        mouse.click(screen_bound_ui[0], screen_bound_ui[1]/2, 1)
+        mouse.move(pos[0], pos[1])
+        hm.MouseMove = return_true
+        hm.MouseLeftDown = return_true
+
+
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, hm, pymousepos
+        global status, debug_out, debug_con, margin, mouse, screen_bound_ui, hm, pymousepos
         global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready, needmovmouse
+        while not self.ready: pass
+        self.__get_max_and_hide_pos()
         if debug_out == 1: print "mt running!"
         set_pos_tag = False
         setpos = ""
@@ -101,21 +115,21 @@ class MousePosThread(threading.Thread):
                 # while needmovmouse: pass
                 # mlock.wait()
                 pymousepos = list(mouse.position())
-                if online[1] == True and pymousepos[0] >= screen_bound[0]:
+                if online[1] == True and pymousepos[0] >= screen_bound_ui[0]:
                     status = 1
-                    setpos = '2'+str(pymousepos[1])  # enter right screen
+                    setpos = '2'+str(pymousepos[1]/screen_bound_ui[1])  # enter right screen
                     set_pos_tag = True
                 elif online[2] == True and pymousepos[0] <= 0:
                     status = 2
-                    setpos = '1'+str(pymousepos[1])  # enter left screen
+                    setpos = '1'+str(pymousepos[1]/screen_bound_ui[1])  # enter left screen
                     set_pos_tag = True
                 elif online[3] == True and pymousepos[1] <= 0:
                     status = 3
-                    setpos = '4'+str(pymousepos[0])  # enter up screen
+                    setpos = '4'+str(pymousepos[0]/screen_bound_ui[0])  # enter up screen
                     set_pos_tag = True
-                elif online[4] == True and pymousepos[1] >= screen_bound[1]:
+                elif online[4] == True and pymousepos[1] >= screen_bound_ui[1]:
                     status = 4
-                    setpos = '3'+str(pymousepos[0])  # enter down screen
+                    setpos = '3'+str(pymousepos[0]/screen_bound_ui[0])  # enter down screen
                     set_pos_tag = True
                 # mlock.done()
             elif status > 0:
@@ -130,7 +144,8 @@ class MousePosThread(threading.Thread):
                         if files_to_send != None: is_files_ready = True
                     else:
                         # hide pointer
-                        mouse.move(screen_bound[0], screen_bound[1] / 2)
+                        # don't use mouse_pos_hide, since it's used in Hook
+                        mouse.move(screen_bound_ui[0], screen_bound_ui[1] / 2)
                         # Hook mouse
                         hm.MouseMove = on_mouse_move
                     hm.MouseAllButtons = on_mouse_click
@@ -146,7 +161,7 @@ class ReceiveThread(threading.Thread):
         threading.Thread.__init__(self,name="receivethread")
 
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, pymousepos, needmovmouse
+        global status, debug_out, debug_con, margin, mouse, screen_bound_ui, sock, pymousepos, needmovmouse
         if debug_out == 1: print "rt running!"
         while True:
             if 1:
@@ -158,13 +173,14 @@ class ReceiveThread(threading.Thread):
                     # mlock.wait()
                     # needmovmouse = False
                     if buf[1] == '1':
-                        mouse.move(screen_bound[0] - margin, int(buf[2:]))
+                        # mouse.move(screen_bound[0] - margin, int(buf[2:]))
+                        mouse.move(screen_bound_ui[0] - margin, int(float(buf[2:]) * screen_bound_ui[1]))
                     elif buf[1] == '2':
-                        mouse.move(margin, int(buf[2:]))
+                        mouse.move(margin, int(float(buf[2:]) * screen_bound_ui[1]))
                     elif buf[1] == '3':
-                        mouse.move(int(buf[2:]), margin)
+                        mouse.move(int(float(buf[2:]) * screen_bound_ui[0]), margin)
                     else:  # buf[1] == 4
-                        mouse.move(int(buf[2:]), screen_bound[1] - margin)
+                        mouse.move(int(float(buf[2:]) * screen_bound_ui[0]), screen_bound_ui[1] - margin)
                     reset_controler()
                     # mlock.done()
                 if buf[:3] == "mov":
@@ -192,7 +208,7 @@ class FileTransportThread(threading.Thread):
 
     def run(self):
         print "ft running!"
-        global status, debug_out, debug_con, margin, mouse, screen_bound, setpos, set_pos_tag, hm
+        global status, debug_out, debug_con, margin, mouse
         global my_address_port_file, dest_address_port_file, is_files_ready
         chunk_size = 1024
         file_socket = socket_init(my_address_port_file)
@@ -267,9 +283,9 @@ def socket_send(op, arg):
 
 # every status = 0 should follow something like hm.keyboard = on_return_ture
 def on_mouse_move(event):
-    global mouse_pos_hide, status, screen_bound, dest_address_port
+    global mouse_pos_hide, status
     if status > 0:
-        mouse_pos = list(event.Position)
+        mouse_pos = trans_hook_pos_to_pymouse_pos_list(event.Position)
         socket_send("mov", str(mouse_pos[0] - mouse_pos_hide[0]) + ',' + str(mouse_pos[1] - mouse_pos_hide[1]))
         return False
     return True
@@ -346,7 +362,7 @@ def set_clipboard_data(data):
 
 
 def get_files_by_clipboard():
-    global clipboard_open, keyboard, mouse_left_down_pos, is_mouse_left_down, mouse, hm, screen_bound
+    global clipboard_open, keyboard, mouse_left_down_pos, is_mouse_left_down, mouse, hm, screen_bound_ui
     files = None
     try:
         while clipboard_open: pass
@@ -368,7 +384,9 @@ def get_files_by_clipboard():
         clipboard_open = False
 
         # hide pointer
-        mouse.move(screen_bound[0], screen_bound[1] / 2)
+        # don't use mouse_pos_hide, since it's used in Hook
+        mouse.move(screen_bound_ui[0], screen_bound_ui[1] / 2)
+        # TODO: get mouse position by hook now as mouse_pos_hide
         # Hook mouse
         hm.MouseMove = on_mouse_move
         # should be with hm.KeyUp = ... logically, but put here to give user a quick feed back that entered other screen
@@ -403,7 +421,7 @@ def reset_controler(go_center = False):
     global status, rt, recvstoptag, debug_out, hm
     status = 0
     if go_center:
-        mouse.move(screen_bound[0]/2, screen_bound[1]/2)
+        mouse.move(screen_bound_ui[0]/2, screen_bound_ui[1]/2)
     hm.MouseMove = return_true
     hm.MouseAllButtons = on_mouse_click_status0
     hm.KeyUp = return_true
@@ -429,9 +447,32 @@ def socket_close():
     connection.close()
     sock.close()
 
+def trans_hook_pos_to_pymouse_pos_list(pos):
+    global ratio_pos
+    return [int(pos[0] * ratio_pos[0]), int(pos[1] * ratio_pos[1])]
+
+def clc_set_bound(event):
+    global screen_bound_ui, ratio_pos
+    screen_bound_ui = mouse.position()
+    # screen_bound_hk: only used in this function
+    screen_bound_hk = event.Position
+    ratio_pos = (screen_bound_ui[0]/screen_bound_hk[0], screen_bound_ui[1]/screen_bound_hk[1])
+    print "screen_bound_ui:"+ str(screen_bound_ui)
+    print "ratio:"+str(ratio_pos)
+    return False
+
+def clc_set_hide_pos(event):
+    global mouse_pos_hide
+    mouse_pos_hide = event.Position
+    return False
+
 
 def return_true(event):
     return True
+
+def return_false(event):
+    return False
+
 
 def keytest(event):
     print "keytest:"+str(event.KeyID)
@@ -477,9 +518,9 @@ def run(d = '192.168.191.1'):
     rt = ReceiveThread()
     mt = MousePosThread()
     ft = FileTransportThread()
-    rt.setDaemon(True)
-    mt.setDaemon(True)
-    ft.setDaemon(True)
+    rt.setDaemon(False)
+    mt.setDaemon(False)
+    ft.setDaemon(False)
     # ft should start before main thread's socket_init, or file port will be blocked by main port's recv()
     ft.start()
     if debug_con == 0:
@@ -487,10 +528,12 @@ def run(d = '192.168.191.1'):
     # other threads especially st & rt should start after main's socket_init for they use the global var 'sock'
     rt.start()
     mt.start()
+    # TODO: make sure getMaxPos function will not shadow this Hook
     hm.MouseAllButtons = on_mouse_click_status0
     #hm.KeyUp = keytest
     hm.HookMouse()
     hm.HookKeyboard()
+    mt.ready = True
     win32gui.PumpMessages()
     socket_close()
 
