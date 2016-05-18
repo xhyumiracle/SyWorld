@@ -90,7 +90,7 @@ class MousePosThread(threading.Thread):
 
     def run(self):
         global status, debug_out, debug_con, margin, mouse, screen_bound, hm, pymousepos
-        global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready
+        global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready, needmovmouse
         if debug_out == 1: print "mt running!"
         set_pos_tag = False
         setpos = ""
@@ -144,7 +144,7 @@ class ReceiveThread(threading.Thread):
         threading.Thread.__init__(self,name="receivethread")
 
     def run(self):
-        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, pymousepos
+        global status, debug_out, debug_con, margin, mouse, screen_bound, sock, pymousepos, needmovmouse
         if debug_out == 1: print "rt running!"
         while True:
             if 1:
