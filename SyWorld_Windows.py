@@ -43,7 +43,7 @@ def init(destaddr):
     SOCKET_SND_BUF_SIZE = 65536
     SOCKET_RCV_BUF_SIZE = 65536
 
-    online = [False, True, True, False, False] # null, right left up down, [0] means nothing, start from 1,
+    online = [False, True, True, True, True] # null, right left up down, [0] means nothing, start from 1,
     status = 0
     mouse = PyMouse()
     keyboard = PyKeyboard()
@@ -75,9 +75,11 @@ class Lock():
         self.__signal = sgn
 
     def wait(self):
-        while not self.__signal:
+        while self.__signal <= 0:
             pass
         self.__signal -= 1
+        if self.__signal < 0:
+            print "nononononononononononon!!!!!!!!!!!!!!!!!!!!!!!"
 
     def done(self):
         self.__signal += 1
@@ -96,8 +98,8 @@ class MousePosThread(threading.Thread):
         setpos = ""
         while True:
             if status == 0:
-                while needmovmouse: pass
-                mlock.wait()
+                # while needmovmouse: pass
+                # mlock.wait()
                 pymousepos = list(mouse.position())
                 if online[1] == True and pymousepos[0] >= screen_bound[0]:
                     status = 1
@@ -115,7 +117,7 @@ class MousePosThread(threading.Thread):
                     status = 4
                     setpos = '3'+str(pymousepos[0])  # enter down screen
                     set_pos_tag = True
-                mlock.done()
+                # mlock.done()
             elif status > 0:
                 if set_pos_tag:  # enter screen
                     # send set pos
@@ -152,30 +154,24 @@ class ReceiveThread(threading.Thread):
                     buf = sock.recv(10240)
                 if debug_out == 1: print "rec" + buf
                 if buf[0] == 'b':
-                    needmovmouse = True
-                    mlock.wait()
-                    needmovmouse = False
+                    # needmovmouse = True
+                    # mlock.wait()
+                    # needmovmouse = False
                     if buf[1] == '1':
-                        reset_controler()
                         mouse.move(screen_bound[0] - margin, int(buf[2:]))
                     elif buf[1] == '2':
-                        reset_controler()
                         mouse.move(margin, int(buf[2:]))
                     elif buf[1] == '3':
-                        reset_controler()
                         mouse.move(int(buf[2:]), margin)
                     else:  # buf[1] == 4
-                        reset_controler()
                         mouse.move(int(buf[2:]), screen_bound[1] - margin)
                     reset_controler()
-                    mlock.done()
+                    # mlock.done()
                 if buf[:3] == "mov":
-                    mlock.wait()
                     pos = buf[3:].split(',')
                     pymousepos[0] += int(pos[0])
                     pymousepos[1] += int(pos[1])
                     mouse.move(pymousepos[0], pymousepos[1])
-                    mlock.done()
                 elif buf[:3] == "clc":
                     mouse_button(int(buf[3:]))
                 elif buf[:2] == "kd":
