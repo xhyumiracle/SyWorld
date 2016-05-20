@@ -66,6 +66,7 @@ def init(destaddr):
             online[i] = False
         destination_ip_port[i] = (destination_ip[i], dest_port)
         destination_ip_port_file[i] = (destination_ip[i], dest_port_file)
+    print online
     my_address = '0.0.0.0'
     dest_address = destaddr
     # TODO: tell others my port number
@@ -179,6 +180,7 @@ class MousePosThread(threading.Thread):
                     hm.KeyUp = on_keyboard_up
                     hm.KeyDown = on_keyboard_down
                     # pyHook.HookManager.HookMouse
+                    print 'before clp, status: ' + str(status)
                     socket_send('clp', get_clipboard_data(), status)
                     set_pos_tag = False
 
