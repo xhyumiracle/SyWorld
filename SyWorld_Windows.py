@@ -275,11 +275,15 @@ class FileTransportThread(threading.Thread):
                     if debug_out == 1:
                         print "send file %s to " %(file_name) +str(destination_ip_port_file[status])
                     buf = ''
-                    while buf != 'begin' or recip != destination_ip_port_file[status]:
+                    while buf not in ['begin', 'cancel'] or recip != destination_ip_port_file[status]:
                         try:
                             buf, recip = file_socket.recvfrom(1024)
                         except Exception, e:
                             pass
+                    if buf == 'cancel':
+                        if debug_out:
+                            print 'file cancelled'
+                        continue
                     if debug_out == 1:
                         print "file name:{} sended!".format(file_name)
                     send_count = 0
@@ -316,13 +320,15 @@ class FileTransportThread(threading.Thread):
                         print "going to open file"
                     file_exist = True
                     try:
-                        open("c:/" + file_name)
+                        with open("c:/" + file_name):
+                            pass
                     except Exception, e:
                         file_exist = False
                         if debug_out:
                             print 'creating file'
                     if file_exist:
                         print 'file already exist, cancel transporting'
+                        file_socket.sendto('cancel', recip)
                         continue
                     with open("c:/" + file_name, "ab") as fd:
                         if debug_out:
