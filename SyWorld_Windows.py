@@ -27,6 +27,7 @@ global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE
 global mouse_left_down_pos, is_mouse_left_down
 global is_files_ready, files_to_send, mlock, needmovmouse, ratio_pos
 global controled, controled_ip
+global file_receive_path
 
 def init(destaddr):
     global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
@@ -37,6 +38,7 @@ def init(destaddr):
     global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse, ratio_pos, destination_ip_port
     global destination_ip_port_file
     global controled, controled_ip
+    global file_receive_path
 
     cp = ConfigParser.ConfigParser()
     cp.read('conf.conf')
@@ -55,6 +57,7 @@ def init(destaddr):
     SOCKET_SND_BUF_SIZE = cp.getint(config_section, 'SOCKET_SND_BUF_SIZE')
     SOCKET_RCV_BUF_SIZE = cp.getint(config_section, 'SOCKET_RCV_BUF_SIZE')
     margin = cp.getint(config_section, 'margin')
+    file_receive_path = cp.getint(config_section, 'file_receive_path')
 
     dest_port = 8001
     dest_port_file = 8002
@@ -261,6 +264,7 @@ class FileTransportThread(threading.Thread):
         print "ft running!"
         global status, debug_out, debug_con, margin, mouse
         global my_address_port_file, destination_ip_port_file, is_files_ready
+        global file_receive_path
         chunk_size = 1024
         buf = ""
         recip = ""
@@ -319,7 +323,7 @@ class FileTransportThread(threading.Thread):
                         print "going to open file"
                     file_exist = True
                     try:
-                        f = open("C:/Users/Administrator/Desktop" + file_name)
+                        f = open(file_receive_path + file_name)
                         f.close()
                     except Exception, e:
                         file_exist = False
@@ -330,7 +334,7 @@ class FileTransportThread(threading.Thread):
                         file_socket.sendto('cancel', recip)
                         continue
                     file_socket.sendto('begin', recip)
-                    with open("c:/" + file_name, "ab") as fd:
+                    with open(file_receive_path + file_name, "ab") as fd:
                         if debug_out:
                             print 'recving: ' + file_name
                         recv_count = 0
