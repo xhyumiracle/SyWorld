@@ -57,7 +57,7 @@ def init(destaddr):
     SOCKET_SND_BUF_SIZE = cp.getint(config_section, 'SOCKET_SND_BUF_SIZE')
     SOCKET_RCV_BUF_SIZE = cp.getint(config_section, 'SOCKET_RCV_BUF_SIZE')
     margin = cp.getint(config_section, 'margin')
-    file_receive_path = cp.getint(config_section, 'file_receive_path')
+    file_receive_path = cp.get(config_section, 'file_receive_path')
 
     dest_port = 8001
     dest_port_file = 8002
