@@ -314,6 +314,16 @@ class FileTransportThread(threading.Thread):
                     # TODO: already have file
                     if debug_out:
                         print "going to open file"
+                    file_exist = True
+                    try:
+                        open("c:/" + file_name)
+                    except Exception, e:
+                        file_exist = False
+                        if debug_out:
+                            print 'creating file'
+                    if file_exist:
+                        print 'file already exist, cancel transporting'
+                        continue
                     with open("c:/" + file_name, "ab") as fd:
                         if debug_out:
                             print 'recving: ' + file_name
