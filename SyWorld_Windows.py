@@ -289,7 +289,12 @@ class FileTransportThread(threading.Thread):
                         print "chunk {0} sended".format(send_count)
                         time.sleep(1.0/2048)  # change the speed from 2MB/s into 1MB/s in my test env, so won't be so ka
                         if send_count == 10:
-                            while file_socket.recv(1024) != "continue": pass
+                            buf = ''
+                            while buf != "continue" or recip != destination_ip_port_file[status]:
+                                try:
+                                    buf, recip = file_socket.recvfrom(1024)
+                                except Exception, e:
+                                    pass
                             send_count = 0
                     file_socket.sendto('end', destination_ip_port_file[status])
                     print "end 1 sended"
@@ -305,33 +310,34 @@ class FileTransportThread(threading.Thread):
                     # just in "else"
                     file_name = buf
                     file_socket.sendto('begin', recip)
-                    try:
+                    # TODO: already have file
+                    if debug_out:
+                        print "going to open file"
+                    with open("c:/" + file_name, "ab") as fd:
                         if debug_out:
-                            print "going to open file"
-                        with open("c:/" + file_name, "ab") as fd:
+                            print 'recving: ' + file_name
+                        recv_count = 0
+                        while True:
                             if debug_out:
-                                print 'recving: ' + file_name
-                            recv_count = 0
-                            while True:
-                                if debug_out:
-                                    print 'waiting for data'
+                                print 'waiting for data'
+                            try:
                                 buf, ip = file_socket.recvfrom(1030)
-                                if ip != recip:
-                                    # TODO: do something
-                                    pass
-                                if buf[:3] == 'end':
-                                    break
-                                recv_count += 1
-                                if recv_count == 10:
-                                    file_socket.sendto('continue', recip)
-                                    recv_count = 0
-                                fd.write(buf[1:])
-                                if debug_out:
-                                    print 'recv_count' + str(recv_count)
-                            if debug_out:
-                                print 'finish!'
-                    except Exception, e:
-                        print e
+                            except Exception, e:
+                                pass
+                            if ip != recip:
+                                # TODO: do something
+                                pass
+                            if buf[:3] == 'end':
+                                break
+                            recv_count += 1
+                            if recv_count == 10:
+                                file_socket.sendto('continue', recip)
+                                recv_count = 0
+                            fd.write(buf[1:])
+                        if debug_out:
+                            print 'recv_count' + str(recv_count)
+                    if debug_out:
+                        print 'finish!'
         file_socket.close()
         if debug_out == 1: print "ft end!"
 
