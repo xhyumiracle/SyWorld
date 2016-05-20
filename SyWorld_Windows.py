@@ -301,10 +301,11 @@ class FileTransportThread(threading.Thread):
                 is_files_ready = False
             else:
                 # print "no file ready"
+                buf = ''
                 try:
                     buf, recip = file_socket.recvfrom(1024)
                 except Exception, e:
-                    pass
+                    continue
                 if buf:
                     if debug_out: print "recv file: " + buf + " from " + str(recip)
                     # just in "else"
