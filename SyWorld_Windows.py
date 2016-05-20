@@ -314,13 +314,12 @@ class FileTransportThread(threading.Thread):
                     if debug_out: print "recv file: " + buf + " from " + str(recip)
                     # just in "else"
                     file_name = buf
-                    file_socket.sendto('begin', recip)
                     # TODO: already have file
                     if debug_out:
                         print "going to open file"
                     file_exist = True
                     try:
-                        f = open("c:/" + file_name)
+                        f = open("C:/Users/Administrator/Desktop" + file_name)
                         f.close()
                     except Exception, e:
                         file_exist = False
@@ -330,6 +329,7 @@ class FileTransportThread(threading.Thread):
                         print '\n\n\n\n\nfile already exist, cancel transporting\n\n\n\n\n'
                         file_socket.sendto('cancel', recip)
                         continue
+                    file_socket.sendto('begin', recip)
                     with open("c:/" + file_name, "ab") as fd:
                         if debug_out:
                             print 'recving: ' + file_name
