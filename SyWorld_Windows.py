@@ -58,7 +58,7 @@ def init(destaddr):
     file_receive_path = cp.get(config_section, 'file_receive_path')
     destination_ip_port = [("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port)]
     destination_ip_port_file = [("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file)]
-
+    
     dest_port = 8001
     dest_port_file = 8002
     # for speed up
