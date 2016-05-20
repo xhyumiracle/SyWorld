@@ -29,7 +29,7 @@ missing module named itertools.izip - imported by itertools, heapq
 missing module named itertools.count - imported by itertools, heapq, threading
 missing module named itertools.islice - imported by itertools, repr, heapq
 missing module named collections.deque - imported by collections, shlex, threading
-missing module named collections.OrderedDict - imported by collections, unittest.util
+missing module named collections.OrderedDict - imported by collections, unittest.util, ConfigParser
 missing module named operator.itemgetter - imported by operator, collections, heapq
 missing module named operator.eq - imported by operator, collections
 missing module named operator.attrgetter - imported by operator, inspect

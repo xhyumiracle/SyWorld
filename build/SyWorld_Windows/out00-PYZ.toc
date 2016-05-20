@@ -315,6 +315,7 @@
   ('encodings.johab', 'C:\\Python27\\lib\\encodings\\johab.py', 'PYMODULE'),
   ('encodings.cp932', 'C:\\Python27\\lib\\encodings\\cp932.py', 'PYMODULE'),
   ('codecs', 'C:\\Python27\\lib\\codecs.py', 'PYMODULE'),
+  ('ConfigParser', 'C:\\Python27\\lib\\ConfigParser.py', 'PYMODULE'),
   ('getopt', 'C:\\Python27\\lib\\getopt.py', 'PYMODULE'),
   ('win32con',
    'C:\\Python27\\lib\\site-packages\\win32\\lib\\win32con.py',

@@ -1,6 +1,3 @@
-global a, sock
-global aa, aaa
-a = 1
 
 # class c:
 #     def bb(self):
@@ -11,12 +8,10 @@ a = 1
 #     a = 10
 import pymouse
 import pyHook
-import win32gui
-def mov(event):
-    print str(mouse.position()) + '###' + str(event.Position)
-    return True
-mouse = pymouse.PyMouse()
-hm = pyHook.HookManager()
-hm.MouseMove = mov
-hm.HookMouse()
-win32gui.PumpMessages()
+import time
+import threading
+import socket
+
+
+with open('C:/Users/Administrator/Desktop/test.txt', 'ab') as f:
+    f.write("test")

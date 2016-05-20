@@ -39,10 +39,12 @@ def init(destaddr):
     global destination_ip_port_file
     global controled, controled_ip
     global file_receive_path
+    global debug_out, debug_con, debug_esc
 
     cp = ConfigParser.ConfigParser()
     cp.read('conf.conf')
     config_section = 'info'
+    debug_section = 'debug'
     # not global
     destination_ip = [0,0,0,0,0]
     online = [0,0,0,0,0]
@@ -56,9 +58,14 @@ def init(destaddr):
     SOCKET_RCV_BUF_SIZE = cp.getint(config_section, 'SOCKET_RCV_BUF_SIZE')
     margin = cp.getint(config_section, 'margin')
     file_receive_path = cp.get(config_section, 'file_receive_path')
+
+    debug_out = cp.getint(debug_section, 'output')
+    debug_con = 1 - cp.getint(debug_section, 'connection')
+    debug_esc = cp.getint(debug_section, 'escape_hot_key')
+
     destination_ip_port = [("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port), ("127.0.0.1", my_port)]
     destination_ip_port_file = [("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file), ("127.0.0.1", my_port_file)]
-    
+
     dest_port = 8001
     dest_port_file = 8002
     # for speed up
@@ -639,10 +646,7 @@ def main(argv):
 
 # def run(d = '172.22.226.10'):
 def run(d = '192.168.191.1'):
-    global debug_out, debug_con, debug_esc, hm, sock
-    debug_con = 0
-    debug_esc = 1
-    debug_out = 1
+    global hm, sock
     init(d)
     rt = ReceiveThread()
     mt = MousePosThread()
