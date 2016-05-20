@@ -26,6 +26,7 @@ global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_
 global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE
 global mouse_left_down_pos, is_mouse_left_down
 global is_files_ready, files_to_send, mlock, needmovmouse, ratio_pos
+global controled, controled_ip
 
 def init(destaddr):
     global online, sleep_time, hm, mouse, keyboard, status, clipboard_open, sock
@@ -35,6 +36,7 @@ def init(destaddr):
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
     global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse, ratio_pos, destination_ip_port
     global destination_ip_port_file
+    global controled, controled_ip
 
     cp = ConfigParser.ConfigParser()
     cp.read('conf.conf')
@@ -82,6 +84,8 @@ def init(destaddr):
     # attention: mouse_pos_hide is used in Hook
     mouse_pos_hide = (0, 0)
     pymousepos = pymousepos_old = []
+    controled = False
+    controled_ip = ""
 
     my_address_port = (my_address, my_port)
     my_address_port_file = (my_address, my_port_file)
@@ -133,6 +137,7 @@ class MousePosThread(threading.Thread):
     def run(self):
         global status, debug_out, debug_con, margin, mouse, screen_bound_ui, hm, pymousepos
         global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready, needmovmouse
+        global controled
         while not self.ready: pass
         self.__get_max_and_hide_pos()
         if debug_out == 1: print "mt running!"
@@ -147,18 +152,22 @@ class MousePosThread(threading.Thread):
                     status = 1
                     setpos = '2'+str(float(pymousepos[1])/float(screen_bound_ui[1]))  # enter right screen
                     set_pos_tag = True
+                    controled = False
                 elif online[2] == True and pymousepos[0] <= 0:
                     status = 2
                     setpos = '1'+str(float(pymousepos[1])/float(screen_bound_ui[1]))  # enter left screen
                     set_pos_tag = True
+                    controled = False
                 elif online[3] == True and pymousepos[1] <= 0:
                     status = 3
                     setpos = '4'+str(float(pymousepos[0])/float(screen_bound_ui[0]))  # enter up screen
                     set_pos_tag = True
+                    controled = False
                 elif online[4] == True and pymousepos[1] >= screen_bound_ui[1]:
                     status = 4
                     setpos = '3'+str(float(pymousepos[0])/float(screen_bound_ui[0]))  # enter down screen
                     set_pos_tag = True
+                    controled = False
                 # mlock.done()
             elif status > 0:
                 if set_pos_tag:  # enter screen
@@ -191,13 +200,18 @@ class ReceiveThread(threading.Thread):
 
     def run(self):
         global status, debug_out, debug_con, margin, mouse, screen_bound_ui, sock, pymousepos, needmovmouse
+        global controled, controled_ip
         if debug_out == 1: print "rt running!"
         while True:
             if 1:
                 if debug_con == 0:
-                    buf = sock.recv(10240)
-                if debug_out == 1: print "rec" + buf
+                    buf, recip = sock.recvfrom(10240)
+                if debug_out == 1:
+                    print "rec" +str(buf) + " from " + str(recip)
                 if buf[0] == 'b':
+                    controled = True
+                    # recip = (ip, port)
+                    controled_ip = recip[0]
                     # needmovmouse = True
                     # mlock.wait()
                     # needmovmouse = False
@@ -212,7 +226,7 @@ class ReceiveThread(threading.Thread):
                         mouse.move(int(float(buf[2:]) * screen_bound_ui[0]), screen_bound_ui[1] - margin)
                     reset_controler()
                     # mlock.done()
-                if status > 0 and buf[:3] == "mov":
+                if controled and buf[:3] == "mov":
                     pos = buf[3:].split(',')
                     pymousepos[0] += int(pos[0])
                     pymousepos[1] += int(pos[1])
