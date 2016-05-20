@@ -320,13 +320,14 @@ class FileTransportThread(threading.Thread):
                         while True:
                             if debug_out:
                                 print 'waiting for data'
-                            try:
-                                buf, ip = file_socket.recvfrom(1030)
-                            except Exception, e:
-                                pass
-                            if ip != recip:
-                                # TODO: do something
-                                pass
+                            ip = ''
+                            buf = ''
+                            while not buf or ip != recip:
+                                try:
+                                    buf, ip = file_socket.recvfrom(1030)
+                                except Exception, e:
+                                    # TODO: do something
+                                    pass
                             if buf[:3] == 'end':
                                 break
                             recv_count += 1
