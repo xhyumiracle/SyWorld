@@ -131,16 +131,18 @@ class MousePosThread(threading.Thread):
         mouse.click(screen_bound_ui[0], screen_bound_ui[1]/2, 1)
         mouse.move(pos[0], pos[1])
         hm.MouseMove = return_true
-        hm.MouseLeftDown = return_true
+        hm.MouseLeftDown = on_mouse_click_status0
 
 
     def run(self):
         global status, debug_out, debug_con, margin, mouse, screen_bound_ui, hm, pymousepos
         global files_to_send, is_mouse_left_down, mouse_left_down_pos, is_files_ready, needmovmouse
         global controled
-        while not self.ready: pass
+        while not self.ready:
+            pass
         self.__get_max_and_hide_pos()
-        if debug_out == 1: print "mt running!"
+        if debug_out == 1:
+            print "mt running!"
         set_pos_tag = False
         setpos = ""
         while True:
@@ -174,11 +176,15 @@ class MousePosThread(threading.Thread):
                     # send set pos
                     socket_send('set', setpos, status)
                     # release mouse left if is dragging file
-                    print "is_mouse_left_down: " + str(is_mouse_left_down)
+                    if debug_out:
+                        print "is_mouse_left_down: " + str(is_mouse_left_down)
                     if is_mouse_left_down:
                         # get file path
                         files_to_send = get_files_by_clipboard()
-                        if files_to_send != None: is_files_ready = True
+                        if files_to_send != None:
+                            is_files_ready = True
+                        if debug_out:
+                            print "file ready to send"
                     else:
                         # hide pointer
                         # don't use mouse_pos_hide, since it's used in Hook
@@ -189,7 +195,6 @@ class MousePosThread(threading.Thread):
                     hm.KeyUp = on_keyboard_up
                     hm.KeyDown = on_keyboard_down
                     # pyHook.HookManager.HookMouse
-                    print 'before clp, status: ' + str(status)
                     socket_send('clp', get_clipboard_data(), status)
                     set_pos_tag = False
 
@@ -204,8 +209,11 @@ class ReceiveThread(threading.Thread):
         if debug_out == 1: print "rt running!"
         while True:
             if 1:
+                buf = ''
                 if debug_con == 0:
                     buf, recip = sock.recvfrom(10240)
+                if not buf:
+                    continue
                 if debug_out == 1:
                     print "rec" +str(buf) + " from " + str(recip)
                 if buf[0] == 'b':
@@ -254,17 +262,26 @@ class FileTransportThread(threading.Thread):
         global status, debug_out, debug_con, margin, mouse
         global my_address_port_file, destination_ip_port_file, is_files_ready
         chunk_size = 1024
-        file_socket = socket_init(my_address_port_file)
+        buf = ""
+        recip = ""
+        file_socket = socket_init(my_address_port_file, blocking=False)
         if debug_out == 1: print "ft running!"
         while True:
             if is_files_ready:
                 print "is_files_ready!"
                 for file in files_to_send:
                     file_name = file.split('\\')[-1]
-                    if debug_out == 1: print "send file name to "+str(destination_ip_port_file[status])
                     file_socket.sendto(file_name, destination_ip_port_file[status])
-                    while file_socket.recv(1024) != "begin": pass
-                    if debug_out == 1: print "file name:{} sended!".format(file_name)
+                    if debug_out == 1:
+                        print "send file %s to " %(file_name) +str(destination_ip_port_file[status])
+                    buf = ''
+                    while buf != 'begin' or recip != destination_ip_port_file[status]:
+                        try:
+                            buf, recip = file_socket.recvfrom(1024)
+                        except Exception, e:
+                            pass
+                    if debug_out == 1:
+                        print "file name:{} sended!".format(file_name)
                     send_count = 0
                     for chunk in read_file_by_chunk(file, chunk_size):
                         file_socket.sendto('0'+chunk, destination_ip_port_file[status])
@@ -277,6 +294,44 @@ class FileTransportThread(threading.Thread):
                     file_socket.sendto('end', destination_ip_port_file[status])
                     print "end 1 sended"
                 is_files_ready = False
+            else:
+                # print "no file ready"
+                try:
+                    buf, recip = file_socket.recvfrom(1024)
+                except Exception, e:
+                    pass
+                if buf:
+                    if debug_out: print "recv file: " + buf + " from " + str(recip)
+                    # just in "else"
+                    file_name = buf
+                    file_socket.sendto('begin', recip)
+                    try:
+                        if debug_out:
+                            print "going to open file"
+                        with open("c:/" + file_name, "ab") as fd:
+                            if debug_out:
+                                print 'recving: ' + file_name
+                            recv_count = 0
+                            while True:
+                                if debug_out:
+                                    print 'waiting for data'
+                                buf, ip = file_socket.recvfrom(1030)
+                                if ip != recip:
+                                    # TODO: do something
+                                    pass
+                                if buf[:3] == 'end':
+                                    break
+                                recv_count += 1
+                                if recv_count == 10:
+                                    file_socket.sendto('continue', recip)
+                                    recv_count = 0
+                                fd.write(buf[1:])
+                                if debug_out:
+                                    print 'recv_count' + str(recv_count)
+                            if debug_out:
+                                print 'finish!'
+                    except Exception, e:
+                        print e
         file_socket.close()
         if debug_out == 1: print "ft end!"
 
@@ -344,8 +399,10 @@ def on_mouse_click(event):
 
 def on_mouse_click_status0(event):
     global mouse_left_down_pos, is_mouse_left_down
+    global debug_out
     if event.Message == 513:
-        print "click!"
+        if debug_out:
+            print "1click!"
         mouse_left_down_pos = mouse.position()
         is_mouse_left_down = True
     if event.Message == 514:
@@ -466,7 +523,8 @@ def reset_controler(go_center = False):
     if go_center:
         mouse.move(screen_bound_ui[0]/2, screen_bound_ui[1]/2)
     hm.MouseMove = return_true
-    hm.MouseAllButtons = on_mouse_click_status0
+    hm.MouseLeftDown = on_mouse_click_status0
+    hm.MouseLeftUp = on_mouse_click_status0
     hm.KeyUp = return_true
     hm.KeyDown = return_true
     status = 0
@@ -476,12 +534,13 @@ def reset_controler(go_center = False):
     if debug_out == 1: print "reset_controler(!"
 
 
-def socket_init(address_port):
+def socket_init(address_port, blocking=True):
     global debug_out
     soc = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     soc.setsockopt(socket.SOL_SOCKET, socket.SO_SNDBUF, SOCKET_SND_BUF_SIZE)
     soc.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SOCKET_RCV_BUF_SIZE)
     soc.bind(address_port)
+    soc.setblocking(blocking)
     print "socket_init " + str(address_port)
     #print soc.recvfrom(100)
     return soc
@@ -570,8 +629,8 @@ def run(d = '192.168.191.1'):
     # other threads especially st & rt should start after main's socket_init for they use the global var 'sock'
     rt.start()
     mt.start()
-    # TODO: make sure getMaxPos function will not shadow this Hook
-    hm.MouseAllButtons = on_mouse_click_status0
+    hm.MouseLeftDown = on_mouse_click_status0
+    hm.MouseLeftUp = on_mouse_click_status0
     #hm.KeyUp = keytest
     hm.HookMouse()
     hm.HookKeyboard()
