@@ -143,7 +143,7 @@ class MousePosThread(threading.Thread):
                 # while needmovmouse: pass
                 # mlock.wait()
                 pymousepos = list(mouse.position())
-                if online[1] == True and pymousepos[0] >= screen_bound_ui[0]:
+                if online[1] == True and pymousepos[0] >= screen_bound_ui[0]: # TODO: and pymousepos[0]!=mouse_pos_hide[0]
                     status = 1
                     setpos = '2'+str(float(pymousepos[1])/float(screen_bound_ui[1]))  # enter right screen
                     set_pos_tag = True
@@ -212,7 +212,7 @@ class ReceiveThread(threading.Thread):
                         mouse.move(int(float(buf[2:]) * screen_bound_ui[0]), screen_bound_ui[1] - margin)
                     reset_controler()
                     # mlock.done()
-                if buf[:3] == "mov":
+                if status > 0 and buf[:3] == "mov":
                     pos = buf[3:].split(',')
                     pymousepos[0] += int(pos[0])
                     pymousepos[1] += int(pos[1])
