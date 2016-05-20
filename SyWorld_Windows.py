@@ -9,6 +9,7 @@ import win32clipboard as winclip
 import win32con
 import sys
 import getopt
+import ConfigParser
 
 global screen_bound_ui
 global mouse, keyboard
@@ -16,7 +17,7 @@ global status
 global connection, sock
 global sleep_time
 global debug_con,debug_esc, debug_out
-global online
+global online, destination_ip_port, destination_ip_port_file
 global pymousepos, pymousepos_old, mouse_pos_hide, margin # pos=[]
 global hm
 global clipboard_open
@@ -32,21 +33,47 @@ def init(destaddr):
     global pymousepos, pymousepos_old, mouse_pos_hide, margin
     global my_address, my_port, my_port_file, my_address_port, my_address_port_file
     global dest_address, dest_port, dest_port_file, dest_address_port, dest_address_port_file
-    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse, ratio_pos
-    my_address = '0.0.0.0'
-    my_port = 8001
-    my_port_file = 8002
-    dest_address = destaddr
+    global SOCKET_SND_BUF_SIZE, SOCKET_RCV_BUF_SIZE, is_mouse_left_down, is_files_ready, mlock, needmovmouse, ratio_pos, destination_ip_port
+    global destination_ip_port_file
+
+    cp = ConfigParser.ConfigParser()
+    cp.read('conf.conf')
+    config_section = 'info'
+    # not global
+    destination_ip = [0,0,0,0,0]
+    online = [0,0,0,0,0]
+    destination_ip_port = [0,0,0,0,0]
+    destination_ip_port_file = [0,0,0,0,0]
+    destination_ip[1] = cp.get(config_section, 'right')
+    destination_ip[2] = cp.get(config_section, 'left')
+    destination_ip[3] = cp.get(config_section, 'up')
+    destination_ip[4] = cp.get(config_section, 'down')
+    my_port = cp.getint(config_section, 'port')
+    my_port_file = cp.getint(config_section, 'file_port')
+    SOCKET_SND_BUF_SIZE = cp.getint(config_section, 'SOCKET_SND_BUF_SIZE')
+    SOCKET_RCV_BUF_SIZE = cp.getint(config_section, 'SOCKET_RCV_BUF_SIZE')
+    margin = cp.getint(config_section, 'margin')
+
     dest_port = 8001
     dest_port_file = 8002
-    SOCKET_SND_BUF_SIZE = 65536
-    SOCKET_RCV_BUF_SIZE = 65536
+    # for speed up
+    # i: should unify with status and online index, which start with 1
+    for i in [1, 2, 3, 4]:
+        #TODO: check if ip correct
+        if destination_ip[i] != '0':
+            online[i] = True
+        else:
+            online[i] = False
+        destination_ip_port[i] = (destination_ip[i], dest_port)
+        destination_ip_port_file[i] = (destination_ip[i], dest_port_file)
+    my_address = '0.0.0.0'
+    dest_address = destaddr
+    # TODO: tell others my port number
 
-    online = [False, True, True, True, True] # null, right left up down, [0] means nothing, start from 1,
+    # online = [False, True, True, True, True] # null, right left up down, [0] means nothing, start from 1,
     status = 0
     mouse = PyMouse()
     keyboard = PyKeyboard()
-    margin = 10
     sleep_time = 0
     clipboard_open = False
     hm = pyHook.HookManager()
@@ -135,7 +162,7 @@ class MousePosThread(threading.Thread):
             elif status > 0:
                 if set_pos_tag:  # enter screen
                     # send set pos
-                    socket_send('set', setpos)
+                    socket_send('set', setpos, status)
                     # release mouse left if is dragging file
                     print "is_mouse_left_down: " + str(is_mouse_left_down)
                     if is_mouse_left_down:
@@ -152,7 +179,7 @@ class MousePosThread(threading.Thread):
                     hm.KeyUp = on_keyboard_up
                     hm.KeyDown = on_keyboard_down
                     # pyHook.HookManager.HookMouse
-                    socket_send('clp', get_clipboard_data())
+                    socket_send('clp', get_clipboard_data(), status)
                     set_pos_tag = False
 
 
@@ -209,7 +236,7 @@ class FileTransportThread(threading.Thread):
     def run(self):
         print "ft running!"
         global status, debug_out, debug_con, margin, mouse
-        global my_address_port_file, dest_address_port_file, is_files_ready
+        global my_address_port_file, destination_ip_port_file, is_files_ready
         chunk_size = 1024
         file_socket = socket_init(my_address_port_file)
         if debug_out == 1: print "ft running!"
@@ -218,20 +245,20 @@ class FileTransportThread(threading.Thread):
                 print "is_files_ready!"
                 for file in files_to_send:
                     file_name = file.split('\\')[-1]
-                    if debug_out == 1: print "send file name to "+str(dest_address_port_file)
-                    file_socket.sendto(file_name, dest_address_port_file)
+                    if debug_out == 1: print "send file name to "+str(destination_ip_port_file[status])
+                    file_socket.sendto(file_name, destination_ip_port_file[status])
                     while file_socket.recv(1024) != "begin": pass
                     if debug_out == 1: print "file name:{} sended!".format(file_name)
                     send_count = 0
                     for chunk in read_file_by_chunk(file, chunk_size):
-                        file_socket.sendto('0'+chunk, dest_address_port_file)
+                        file_socket.sendto('0'+chunk, destination_ip_port_file[status])
                         send_count += 1
                         print "chunk {0} sended".format(send_count)
                         time.sleep(1.0/2048)  # change the speed from 2MB/s into 1MB/s in my test env, so won't be so ka
                         if send_count == 10:
                             while file_socket.recv(1024) != "continue": pass
                             send_count = 0
-                    file_socket.sendto('end', dest_address_port_file)
+                    file_socket.sendto('end', destination_ip_port_file[status])
                     print "end 1 sended"
                 is_files_ready = False
         file_socket.close()
@@ -260,8 +287,8 @@ def read_file_by_chunk(filename, chunksize = 1024):
 # MouseClick    clc     click           l/r
 #
 # TODO:use status to judge to which screen should we send msg
-def socket_send(op, arg):
-    global sleep_time, debug_out, debug_con, sock, dest_address_port
+def socket_send(op, arg, dest_id):
+    global sleep_time, debug_out, debug_con, sock, destination_ip_port
     # time.sleep(sleeptime)
     if op == "set":
         sendstr = "b" + arg  # set0,123 -> b#1#123 -> b1123
@@ -277,8 +304,8 @@ def socket_send(op, arg):
         sendstr = "clp" + arg
     else:
         sendstr = arg
-    if debug_out == 1:print "snd" + sendstr
-    if debug_con == 0:sock.sendto(sendstr, dest_address_port)
+    if debug_out == 1:print "snd" + sendstr + ' to ' + str(destination_ip_port[dest_id])
+    if debug_con == 0:sock.sendto(sendstr, destination_ip_port[dest_id])
 
 
 # every status = 0 should follow something like hm.keyboard = on_return_ture
@@ -286,7 +313,7 @@ def on_mouse_move(event):
     global mouse_pos_hide, status, ratio_pos
     if status > 0:
         mouse_pos = event.Position
-        socket_send("mov", str(int((mouse_pos[0] - mouse_pos_hide[0]) * ratio_pos[0])) + ',' + str(int((mouse_pos[1] - mouse_pos_hide[1])* ratio_pos[1])))
+        socket_send("mov", str(int((mouse_pos[0] - mouse_pos_hide[0]) * ratio_pos[0])) + ',' + str(int((mouse_pos[1] - mouse_pos_hide[1])* ratio_pos[1])), status)
         return False
     return True
 
@@ -294,7 +321,7 @@ def on_mouse_move(event):
 def on_mouse_click(event):
     global status
     if status > 0:
-        socket_send("clc", str(event.Message))  #leftdown:513 leftup:514 rightdown:516 rightup:517 wheel:515??
+        socket_send("clc", str(event.Message), status)  #leftdown:513 leftup:514 rightdown:516 rightup:517 wheel:515??
         return False
     return True
 
@@ -313,7 +340,7 @@ def on_mouse_click_status0(event):
 def on_keyboard_down(event):
     global status, debug_esc
     if status > 0:
-        socket_send("kd", str(event.KeyID))
+        socket_send("kd", str(event.KeyID), status)
         if debug_esc == 1 and event.KeyID == 27:
             reset_controler(True)
         return False
@@ -323,7 +350,7 @@ def on_keyboard_down(event):
 def on_keyboard_up(event):
     global status
     if status > 0:
-        socket_send("ku", str(event.KeyID))
+        socket_send("ku", str(event.KeyID), status)
         return False
     return True
 
