@@ -320,14 +320,14 @@ class FileTransportThread(threading.Thread):
                         print "going to open file"
                     file_exist = True
                     try:
-                        with open("c:/" + file_name):
-                            pass
+                        f = open("c:/" + file_name)
+                        f.close()
                     except Exception, e:
                         file_exist = False
                         if debug_out:
                             print 'creating file'
                     if file_exist:
-                        print 'file already exist, cancel transporting'
+                        print '\n\n\n\n\nfile already exist, cancel transporting\n\n\n\n\n'
                         file_socket.sendto('cancel', recip)
                         continue
                     with open("c:/" + file_name, "ab") as fd:
