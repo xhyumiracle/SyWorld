@@ -622,7 +622,7 @@ def mouse_button(msg):
     if msg == 514:
         mouse.release(pymousepos[0], pymousepos[1],1)
     if msg == 516:
-        mouse.release(pymousepos[1], pymousepos[1],2)
+        mouse.press(pymousepos[1], pymousepos[1],2)
     if msg == 517:
         mouse.release(pymousepos[0], pymousepos[1],2)
 
