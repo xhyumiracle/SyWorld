@@ -6,7 +6,7 @@ config_section = 'info'
 debug_section = 'debug'
 
 destination_ip = [0,0,0,0,0]
-online = [0,0,0,0,0]
+online = [False, False, False, False, False]
 destination_ip[1] = cp.get(config_section, 'right')
 destination_ip[2] = cp.get(config_section, 'left')
 destination_ip[3] = cp.get(config_section, 'up')
