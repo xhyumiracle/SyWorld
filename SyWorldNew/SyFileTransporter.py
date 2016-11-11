@@ -82,6 +82,8 @@ class FileTransportThread(threading.Thread):
                         file_socket.sendto('cancel', recip)
                         continue
                     file_socket.sendto('begin', recip)
+                    # TODO: catch this error, maybe sprang an alert window.
+                    # TODO: maybe check the file path at the very beginning.
                     with open(file_receive_path + file_name, "ab") as fd:
                         if debug_out:
                             print 'recving: ' + file_name

@@ -1,5 +1,6 @@
 import win32clipboard as winclip
 import win32con
+import time
 
 class SyClipboard():
     clipboard_open = False

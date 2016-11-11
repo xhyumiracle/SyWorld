@@ -85,8 +85,8 @@ class MousePosThread(threading.Thread):
         return False
 
     def clc_set_hide_pos(self, event):
-        # self.mouse_pos_hide = event.Position
-        self.mouse_pos_hide = self.mouse.position()
+        self.mouse_pos_hide = event.Position
+        # self.mouse_pos_hide = self.mouse.position()
         print 'mouse pos hide', self.mouse_pos_hide, self.mouse.position()
         return False
 
