@@ -1,5 +1,6 @@
 import socket
-from SyConfig import debug_out, debug_con, sleep_time, destination_ip_port, my_address_port, SOCKET_RCV_BUF_SIZE, SOCKET_SND_BUF_SIZE
+from SyConfig import debug_out, debug_con, sleep_time, destination_ip_port, my_address_port,\
+    SOCKET_RCV_BUF_SIZE, SOCKET_SND_BUF_SIZE, online
 class SySocket():
     def __init__(self):
         if debug_con == 0:
@@ -28,6 +29,8 @@ class SySocket():
     #
     # TODO:use status to judge to which screen should we send msg
     def socket_send(self, op, arg, dest_id):
+        if not online[dest_id]:
+            return
         # time.sleep(sleeptime)
         if op == "set":
             sendstr = "b" + arg  # set0,123 -> b#1#123 -> b1123
@@ -43,6 +46,10 @@ class SySocket():
             sendstr = "clp" + arg
         else:
             sendstr = arg
-        if debug_out == 1:print "snd" + sendstr + ' to ' + str(destination_ip_port[dest_id])
-        if debug_con == 0:self.sock.sendto(sendstr, destination_ip_port[dest_id])
+        if debug_out == 1:
+            print 'dest id', dest_id
+            print 'destination ip port [dest id]', destination_ip_port[dest_id]
+            print "snd" + sendstr + ' to ' + str(destination_ip_port[dest_id])
+        if debug_con == 0:
+            self.sock.sendto(sendstr, destination_ip_port[dest_id])
 

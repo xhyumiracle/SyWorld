@@ -1,5 +1,4 @@
 import threading
-import SyTools
 import time
 from pymouse import PyMouse
 from SyConfig import *
@@ -28,6 +27,7 @@ class MousePosThread(threading.Thread):
         pos = self.mouse.position()
         self.mouse.click(maxpos, maxpos, 1)
         self.hm.MouseLeftDown = self.clc_set_hide_pos
+        print 'before hide click test, screen bound ui', self.sy.screen_bound_ui
         self.mouse.click(self.sy.screen_bound_ui[0], self.sy.screen_bound_ui[1]/2, 1)
         self.mouse.move(pos[0], pos[1])
         self.hm.MouseMove = self.return_true
@@ -37,6 +37,7 @@ class MousePosThread(threading.Thread):
     def on_mouse_move(self, event):
         if self.sy.status > 0:
             mouse_pos = event.Position
+            print 'mouse pos hide', self.mouse_pos_hide
             self.sy.sySock.socket_send("mov", str(int((mouse_pos[0] - self.mouse_pos_hide[0]) * self.ratio_pos[0])) + ',' + str(int((mouse_pos[1] - self.mouse_pos_hide[1])* self.ratio_pos[1])), self.sy.status)
             # sySock.socket_send("mov", str(mouse_pos[0] - self.mouse_pos_hide[0]) + ',' + str(mouse_pos[1] - self.mouse_pos_hide[1]))
             return False
@@ -51,9 +52,9 @@ class MousePosThread(threading.Thread):
 
     def on_mouse_click_status0(self, event):
         if event.Message == 513:
-            if debug_out:
-                print "click!"
             self.mouse_left_down_pos = self.mouse.position()
+            if debug_out:
+                print "click!", self.mouse_left_down_pos
             self.is_mouse_left_down = True
         if event.Message == 514:
             self.is_mouse_left_down = False
@@ -70,22 +71,29 @@ class MousePosThread(threading.Thread):
             self.mouse.release(self.pymousepos[0], self.pymousepos[1],2)
 
     def clc_set_bound(self, event):
+        print 'in clc set bound:'
+        test = event.Position
+        print 'event position', test
         self.sy.screen_bound_ui = self.mouse.position()
         # screen_bound_hk: only used in this function
         screen_bound_hk = event.Position
+        print 'screen bound hk', screen_bound_hk
+        print 'screen bound ui', self.sy.screen_bound_ui
         self.ratio_pos = (float(self.sy.screen_bound_ui[0])/float(screen_bound_hk[0]), float(self.sy.screen_bound_ui[1])/float(screen_bound_hk[1]))
         print "self.sy.screen_bound_ui:"+ str(self.sy.screen_bound_ui)
         print "ratio:"+str(self.ratio_pos)
         return False
 
     def clc_set_hide_pos(self, event):
-        self.mouse_pos_hide = event.Position
+        # self.mouse_pos_hide = event.Position
+        self.mouse_pos_hide = self.mouse.position()
+        print 'mouse pos hide', self.mouse_pos_hide, self.mouse.position()
         return False
 
     def return_true(self, event):
         return True
 
-    def return_false(event):
+    def return_false(self, event):
         return False
 
     def run(self):
