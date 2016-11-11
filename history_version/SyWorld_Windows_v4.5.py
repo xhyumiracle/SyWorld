@@ -442,7 +442,7 @@ def socket_init(address_port):
     print "socket_init " + str(address_port)
     #print soc.recvfrom(100)
     return soc
-
+ 
 
 def socket_close():
     global connection, sock
