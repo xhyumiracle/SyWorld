@@ -5,7 +5,7 @@
 * But it is very likely to be worked nicely under good net conditions.
 
 ## Installation
-` $git clone git@github.com:xhyumiracle/SyWorld.git`
+` $ git clone git@github.com:xhyumiracle/SyWorld.git`
 
 ## Configuration
 * Always modify ***conf.conf*** laying in the same dir with main module.
